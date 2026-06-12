@@ -23,16 +23,12 @@ import {
   type VaultLocationKey,
   getLocationOptions,
   getLockerOptions,
-  getRackOptions,
 } from "@/lib/config/vault-locations";
-import type { PaginatedResult, DocumentWithOwner, SelectItem } from "@/types";
+import type { PaginatedResult, DocumentWithOwner } from "@/types";
 
 interface DocumentTableProps {
   result: PaginatedResult<DocumentWithOwner>;
   isAdmin: boolean;
-  companies?: SelectItem[];
-  clients?: SelectItem[];
-  categories?: string[];
 }
 
 function ownerName(doc: DocumentWithOwner): string {
@@ -45,9 +41,6 @@ function ownerKind(doc: DocumentWithOwner): string {
   if (doc.company) return "Company";
   return "";
 }
-function categoryLabel(doc: DocumentWithOwner): string {
-  return doc.category === "Other" && doc.categoryOther ? doc.categoryOther : doc.category;
-}
 function locationLabel(doc: DocumentWithOwner): string {
   if (!doc.location) return "—";
   const loc = VAULT_LOCATIONS[doc.location as VaultLocationKey]?.label ?? doc.location;
@@ -57,9 +50,6 @@ function locationLabel(doc: DocumentWithOwner): string {
 export function DocumentTable({
   result,
   isAdmin,
-  companies = [],
-  clients = [],
-  categories = [],
 }: DocumentTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -72,12 +62,8 @@ export function DocumentTable({
 
   // Default view is AVAILABLE only; "ALL" clears the status filter.
   const statusValue = searchParams.get("status") ?? "AVAILABLE";
-  const categoryValue = searchParams.get("category") ?? "";
-  const companyValue = searchParams.get("companyId") ?? "";
-  const clientValue = searchParams.get("clientId") ?? "";
   const locationValue = searchParams.get("location") ?? "";
   const lockerValue = searchParams.get("lockerNo") ?? "";
-  const rackValue = searchParams.get("rackNo") ?? "";
 
   const updateParams = useCallback(
     (params: Record<string, string>) => {
@@ -105,13 +91,7 @@ export function DocumentTable({
   };
 
   const hasActiveFilters =
-    statusValue !== "AVAILABLE" ||
-    categoryValue ||
-    companyValue ||
-    clientValue ||
-    locationValue ||
-    lockerValue ||
-    rackValue;
+    statusValue !== "AVAILABLE" || locationValue || lockerValue;
 
   const { data: documents, total, page, limit, totalPages } = result;
 
@@ -166,22 +146,12 @@ export function DocumentTable({
                 { value: "ALL", label: "All Statuses" },
               ]}
             />
-            <SearchableSelect
-              className="w-44"
-              value={categoryValue}
-              onChange={(v) => updateParams({ category: v })}
-              searchPlaceholder="Search categories…"
-              options={[
-                { value: "", label: "All Categories" },
-                ...categories.map((c) => ({ value: c, label: c })),
-              ]}
-            />
 
             {/* Storage location filters (available to all roles) */}
             <SearchableSelect
               className="w-40"
               value={locationValue}
-              onChange={(v) => updateParams({ location: v, lockerNo: "", rackNo: "" })}
+              onChange={(v) => updateParams({ location: v, lockerNo: "" })}
               options={[
                 { value: "", label: "All Locations" },
                 ...getLocationOptions(),
@@ -190,7 +160,7 @@ export function DocumentTable({
             <SearchableSelect
               className="w-36"
               value={lockerValue}
-              onChange={(v) => updateParams({ lockerNo: v, rackNo: "" })}
+              onChange={(v) => updateParams({ lockerNo: v })}
               disabled={!locationValue}
               disabledHint="Locker"
               options={[
@@ -198,53 +168,14 @@ export function DocumentTable({
                 ...getLockerOptions(locationValue),
               ]}
             />
-            <SearchableSelect
-              className="w-36"
-              value={rackValue}
-              onChange={(v) => updateParams({ rackNo: v })}
-              disabled={!lockerValue}
-              disabledHint="Rack"
-              options={[
-                { value: "", label: "All Racks" },
-                ...getRackOptions(locationValue, lockerValue),
-              ]}
-            />
 
-            {isAdmin && companies.length > 0 && (
-              <SearchableSelect
-                className="w-44"
-                value={companyValue}
-                onChange={(v) => updateParams({ companyId: v })}
-                searchPlaceholder="Search companies…"
-                options={[
-                  { value: "", label: "All Companies" },
-                  ...companies.map((c) => ({ value: c.id, label: c.name })),
-                ]}
-              />
-            )}
-            {isAdmin && clients.length > 0 && (
-              <SearchableSelect
-                className="w-44"
-                value={clientValue}
-                onChange={(v) => updateParams({ clientId: v })}
-                searchPlaceholder="Search clients…"
-                options={[
-                  { value: "", label: "All Clients" },
-                  ...clients.map((c) => ({ value: c.id, label: c.name })),
-                ]}
-              />
-            )}
             {hasActiveFilters && (
               <button
                 onClick={() =>
                   updateParams({
                     status: "",
-                    category: "",
-                    companyId: "",
-                    clientId: "",
                     location: "",
                     lockerNo: "",
-                    rackNo: "",
                   })
                 }
                 className="text-xs text-red-500 hover:text-red-700 font-medium"
@@ -282,7 +213,6 @@ export function DocumentTable({
                     <th>Code</th>
                     <th>Name</th>
                     <th>Owner</th>
-                    <th>Category</th>
                     <th>Location</th>
                     <th>Status</th>
                     <th>File</th>
@@ -301,11 +231,6 @@ export function DocumentTable({
                       <td>
                         <p className="text-arnifi-ink text-sm">{ownerName(doc)}</p>
                         <p className="text-[11px] text-arnifi-muted">{ownerKind(doc)}</p>
-                      </td>
-                      <td>
-                        <span className="px-2 py-0.5 bg-arnifi-bg rounded-md text-xs text-arnifi-muted border border-arnifi-border">
-                          {categoryLabel(doc)}
-                        </span>
                       </td>
                       <td className="text-xs text-arnifi-muted whitespace-nowrap">{locationLabel(doc)}</td>
                       <td><StatusBadge status={doc.status} /></td>
@@ -359,7 +284,7 @@ export function DocumentTable({
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-arnifi-ink truncate">{doc.name}</p>
                       <p className="text-xs text-arnifi-muted mt-0.5">
-                        {ownerName(doc)} · {categoryLabel(doc)}
+                        {ownerName(doc)}
                       </p>
                     </div>
                     <StatusBadge status={doc.status} size="sm" />

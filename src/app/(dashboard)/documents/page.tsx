@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { auth } from "@/lib/auth/auth";
-import { getDocuments, getDocumentCategories } from "@/actions/document.actions";
-import { getCompaniesForSelect } from "@/actions/company.actions";
-import { getClientsForSelect } from "@/actions/client.actions";
+import { getDocuments } from "@/actions/document.actions";
 import { DocumentTable } from "@/components/documents/document-table";
 import { PageHeader } from "@/components/shared/page-header";
 import type { DocStatus, VaultLocation } from "@prisma/client";
@@ -48,11 +46,6 @@ export default async function DocumentsPage({ searchParams }: Props) {
     limit: 20,
   });
 
-  // Owner filter dropdowns (admin only — these actions require admin).
-  const companies = isAdmin ? await getCompaniesForSelect() : [];
-  const clients = isAdmin ? await getClientsForSelect() : [];
-  const categories = await getDocumentCategories();
-
   return (
     <div className="page-container">
       <PageHeader
@@ -68,13 +61,7 @@ export default async function DocumentsPage({ searchParams }: Props) {
           ) : undefined
         }
       />
-      <DocumentTable
-        result={result}
-        isAdmin={isAdmin}
-        companies={companies}
-        clients={clients}
-        categories={categories}
-      />
+      <DocumentTable result={result} isAdmin={isAdmin} />
     </div>
   );
 }
