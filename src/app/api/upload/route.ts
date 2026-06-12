@@ -54,16 +54,16 @@ export async function POST(req: NextRequest) {
     const ext = fileName.split(".").pop();
     const fileKey = `documents/${session.user.id}/${uuidv4()}.${ext}`;
 
-    // Create presigned URL (valid for 5 minutes)
+    // Create presigned URL (valid for 5 minutes).
+    // Only ContentType is signed here: the browser sends a matching Content-Type
+    // header on the PUT. We deliberately omit x-amz-meta-* metadata — presigning
+    // it would require the browser to echo those headers back, and it doesn't,
+    // which yields a 403 SignatureDoesNotMatch. The uploader is already captured
+    // in the object key (documents/<userId>/...) and in the document record.
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: fileKey,
       ContentType: fileType,
-      ContentLength: fileSize,
-      Metadata: {
-        uploadedBy: session.user.id,
-        originalName: fileName,
-      },
     });
 
     const uploadUrl = await getSignedUrl(s3Client, command, {
