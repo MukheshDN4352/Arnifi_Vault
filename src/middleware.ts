@@ -1,0 +1,90 @@
+import { auth } from "@/lib/auth/auth";
+import { NextResponse } from "next/server";
+
+// Routes accessible without authentication
+const PUBLIC_ROUTES = ["/login", "/unauthorized"];
+
+// Authenticated route where users with mustResetPassword are forced to go
+const RESET_ROUTE = "/reset-password";
+
+// Routes requiring ADMIN role
+const ADMIN_ROUTES = [
+  "/users",
+  "/companies",
+  "/clients",
+  "/documents/new",
+  "/checkout-history",
+  "/audit-trail",
+  "/reports",
+];
+
+export default auth((req) => {
+  const { nextUrl } = req;
+  const session = req.auth;
+  const isLoggedIn = !!session?.user;
+  const userRole = session?.user?.role;
+
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) => nextUrl.pathname === route || nextUrl.pathname.startsWith(`${route}/`)
+  );
+
+  // Allow public routes
+  if (isPublicRoute) {
+    // Redirect logged-in users away from login page
+    if (isLoggedIn && nextUrl.pathname === "/login") {
+      return NextResponse.redirect(new URL("/dashboard", nextUrl));
+    }
+    return NextResponse.next();
+  }
+
+  // Redirect unauthenticated users to login
+  if (!isLoggedIn) {
+    const loginUrl = new URL("/login", nextUrl);
+    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Force first-login password reset before anything else
+  const mustReset = session?.user?.mustResetPassword;
+  const onResetPage = nextUrl.pathname === RESET_ROUTE;
+  if (mustReset && !onResetPage) {
+    return NextResponse.redirect(new URL(RESET_ROUTE, nextUrl));
+  }
+  if (!mustReset && onResetPage) {
+    return NextResponse.redirect(new URL("/dashboard", nextUrl));
+  }
+
+  // Check admin-only routes
+  const isAdminRoute = ADMIN_ROUTES.some(
+    (route) =>
+      nextUrl.pathname === route || nextUrl.pathname.startsWith(`${route}/`)
+  );
+
+  if (isAdminRoute && userRole !== "ADMIN") {
+    return NextResponse.redirect(new URL("/unauthorized", nextUrl));
+  }
+
+  // Document create/edit is admin-only (view is open to all roles)
+  if (
+    nextUrl.pathname.match(/^\/documents\/[^/]+\/edit$/) &&
+    userRole !== "ADMIN"
+  ) {
+    return NextResponse.redirect(new URL("/unauthorized", nextUrl));
+  }
+
+  return NextResponse.next();
+});
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico
+     * - public folder
+     * - api/auth routes (NextAuth handles these)
+     */
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};

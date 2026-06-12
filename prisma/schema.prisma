@@ -1,0 +1,173 @@
+// ============================================================
+// VAULT DOCUMENT LOGBOOK — PRISMA SCHEMA
+// PostgreSQL + Prisma ORM
+//
+// Ownership: documents belong to a Company and/or a Client (not a login
+// User). Checkout is terminal (CHECKED_OUT == removed from active vault);
+// there is no return flow. CheckoutLog + AuditLog are append-only.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // optional, used for migrations if set
+ 
+}
+
+// ─────────────── ENUMS ───────────────
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+  CLIENT
+}
+
+enum DocStatus {
+  AVAILABLE
+  CHECKED_OUT // terminal — treated as removed from the active vault
+}
+
+enum VaultLocation {
+  DUBAI
+  INDIA
+}
+
+// ─────────────── MODELS ───────────────
+
+model User {
+  // Login accounts only. A CLIENT login is linked to a Company (company
+  // account) or a Client (individual account) via companyId / clientId.
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String?
+  password          String // bcrypt hash — never exposed to clients
+  role              Role
+  mustResetPassword Boolean  @default(true)
+  isActive          Boolean  @default(true)
+
+  companyId String?
+  clientId  String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  client    Client?  @relation(fields: [clientId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([companyId])
+  @@index([clientId])
+  @@index([email])
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  clients   Client[]
+  documents Document[]
+  accounts  User[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+
+  documents Document[]
+  accounts  User[]
+
+  @@index([companyId])
+}
+
+model Document {
+  id            String  @id @default(cuid())
+  code          String  @unique // Human-readable: DOC-001
+  name          String
+  category      String // see DOCUMENT_CATEGORIES; "Other" uses categoryOther
+  categoryOther String? // required only when category == "Other"
+  description   String?
+
+  // S3 file storage (optional)
+  fileKey  String?
+  fileUrl  String?
+  fileName String?
+  fileSize Int?
+  mimeType String?
+
+  // Owner — a Company and/or a Client (client carries its derived company too)
+  companyId String?
+  clientId  String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  client    Client?  @relation(fields: [clientId], references: [id])
+
+  // Physical storage — nullable for legacy rows, required by the create form
+  location VaultLocation?
+  lockerNo String?
+  rackNo   String?
+
+  status      DocStatus @default(AVAILABLE)
+  createdById String // admin who created it (no FK — decoupled)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One checkout per document (terminal); present once checked out
+  checkoutLog CheckoutLog?
+
+  @@index([status])
+  @@index([companyId])
+  @@index([clientId])
+  @@index([location])
+  @@index([code])
+}
+
+model CheckoutLog {
+  // Append-only, one per checkout; snapshots everything at checkout time.
+  id         String   @id @default(cuid())
+  documentId String   @unique
+  document   Document @relation(fields: [documentId], references: [id])
+
+  // Snapshots (immutable record, independent of later edits)
+  docCode      String
+  docName      String
+  ownerCompany String?
+  ownerClient  String?
+  location     String?
+  lockerNo     String?
+  rackNo       String?
+
+  takenByName   String // who physically takes the document (required)
+  takenByDetail String? // optional contact / department
+  purpose       String?
+  checkedOutAt  DateTime // when taken (defaults to now, editable)
+  performedById String // admin who issued it (no FK — decoupled)
+  performedByName String? // snapshot of the issuing admin's name at checkout
+
+  createdAt DateTime @default(now())
+
+  @@index([checkedOutAt])
+  @@index([performedById])
+}
+
+model AuditLog {
+  // Immutable, covers ALL state-changing actions. No FK on actorId so the
+  // log can never be blocked by or cascade from user-record changes.
+  id         String   @id @default(cuid())
+  action     String // e.g. DOCUMENT_CREATED, DOCUMENT_CHECKED_OUT, USER_CREATED
+  entityType String // Document | User | Company | Client | System
+  entityId   String
+  actorId    String // who performed it
+  metadata   Json? // before/after or relevant snapshot
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
