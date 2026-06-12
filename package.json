@@ -42,7 +42,7 @@
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "lucide-react": "^0.462.0",
-    "next": "15.1.0",
+    "next": "15.1.11",
     "next-auth": "^5.0.0-beta.25",
     "next-themes": "^0.4.6",
     "prisma": "^5.22.0",
@@ -72,6 +72,6 @@
     "typescript": "^5"
   },
   "prisma": {
-  "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
-}
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  }
 }
