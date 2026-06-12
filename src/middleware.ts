@@ -1,5 +1,11 @@
-import { auth } from "@/lib/auth/auth";
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
+import { authConfig } from "@/lib/auth/auth.config";
+
+// Build an Edge-safe auth instance from the lightweight config only.
+// Importing the full `@/lib/auth/auth` here would pull Prisma + bcryptjs into
+// the Edge runtime and cause MIDDLEWARE_INVOCATION_FAILED on Vercel.
+const { auth } = NextAuth(authConfig);
 
 // Routes accessible without authentication
 const PUBLIC_ROUTES = ["/login", "/unauthorized"];

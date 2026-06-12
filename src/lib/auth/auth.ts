@@ -1,16 +1,13 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { Role } from "@prisma/client";
+import { authConfig } from "./auth.config";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
+  ...authConfig,
   providers: [
     Credentials({
       id: "credentials",
@@ -51,33 +48,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role as Role;
-        token.mustResetPassword = user.mustResetPassword ?? false;
-        token.companyId = user.companyId ?? null;
-        token.clientId = user.clientId ?? null;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user && token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as Role;
-        session.user.mustResetPassword =
-          (token.mustResetPassword as boolean) ?? false;
-        session.user.companyId = (token.companyId as string | null) ?? null;
-        session.user.clientId = (token.clientId as string | null) ?? null;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
+  // `session`, `pages`, and the jwt/session `callbacks` are inherited from
+  // `authConfig` (shared with the Edge middleware). Only the Node-runtime
+  // pieces below — the Credentials provider above and the Prisma-backed
+  // audit `events` — live in this file.
   events: {
     async signIn({ user }) {
       // Record login audit event
