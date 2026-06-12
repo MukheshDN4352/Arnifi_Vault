@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Search, Plus, Edit, UserX, UserCheck, Users } from "lucide-react";
@@ -51,6 +52,15 @@ export function UserTable({ result, currentUserId }: UserTableProps) {
     [pathname, router, searchParams]
   );
 
+  // Debounce search: push the URL (which refetches on the server) only after
+  // the user pauses typing, instead of firing a round-trip on every keystroke.
+  const debouncedSearch = useDebounce(search, 350);
+  useEffect(() => {
+    if (debouncedSearch !== (searchParams.get("search") ?? "")) {
+      updateParams({ search: debouncedSearch });
+    }
+  }, [debouncedSearch, searchParams, updateParams]);
+
   const handlePage = (page: number) => {
     const current = new URLSearchParams(searchParams.toString());
     current.set("page", String(page));
@@ -84,10 +94,7 @@ export function UserTable({ result, currentUserId }: UserTableProps) {
               type="text"
               placeholder="Search users by name or email…"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                updateParams({ search: e.target.value });
-              }}
+              onChange={(e) => setSearch(e.target.value)}
               className="vault-input pl-10 h-9 text-sm"
             />
           </div>

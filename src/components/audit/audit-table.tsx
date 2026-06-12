@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Search, ShieldCheck, Filter } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -54,6 +55,15 @@ export function AuditTable({ result }: AuditTableProps) {
     [pathname, router, searchParams]
   );
 
+  // Debounce search: push the URL (which refetches on the server) only after
+  // the user pauses typing, instead of firing a round-trip on every keystroke.
+  const debouncedSearch = useDebounce(search, 350);
+  useEffect(() => {
+    if (debouncedSearch !== (searchParams.get("search") ?? "")) {
+      updateParams({ search: debouncedSearch });
+    }
+  }, [debouncedSearch, searchParams, updateParams]);
+
   const handlePage = (page: number) => {
     const current = new URLSearchParams(searchParams.toString());
     current.set("page", String(page));
@@ -72,10 +82,7 @@ export function AuditTable({ result }: AuditTableProps) {
             type="text"
             placeholder="Search by user, entity ID…"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              updateParams({ search: e.target.value });
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             className="vault-input pl-10 h-9 text-sm"
           />
         </div>

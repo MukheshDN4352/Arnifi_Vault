@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import { auth } from "@/lib/auth/auth";
 import { documentRepository } from "@/repositories/document.repository";
 import { userRepository } from "@/repositories/user.repository";
@@ -16,9 +16,16 @@ import type { Prisma } from "@prisma/client";
 
 type Scope = Prisma.DocumentWhereInput | undefined;
 
+// Deduplicate document stats within a single render: StatsSection and
+// ChartsSection both need them and are passed the same `scope` reference, so
+// React's request-scoped cache collapses the two identical calls into one DB
+// round-trip (3 count queries instead of 6) while keeping the Suspense
+// boundaries independent.
+const getDocStats = cache((scope: Scope) => documentRepository.getStats(scope));
+
 async function StatsSection({ scope, isAdmin }: { scope: Scope; isAdmin: boolean }) {
   const [docStats, userStats, checkoutStats] = await Promise.all([
-    documentRepository.getStats(scope),
+    getDocStats(scope),
     isAdmin ? userRepository.getCount() : Promise.resolve(null),
     isAdmin ? checkoutRepository.getStats() : Promise.resolve(null),
   ]);
@@ -36,7 +43,7 @@ async function StatsSection({ scope, isAdmin }: { scope: Scope; isAdmin: boolean
 
 async function ChartsSection({ scope, isAdmin }: { scope: Scope; isAdmin: boolean }) {
   const [docStats, locations, monthly] = await Promise.all([
-    documentRepository.getStats(scope),
+    getDocStats(scope),
     documentRepository.getLocationBreakdown(scope),
     isAdmin ? checkoutRepository.getMonthlyActivity(6) : Promise.resolve(null),
   ]);

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Search,
   Plus,
@@ -88,6 +89,15 @@ export function DocumentTable({
     [pathname, router, searchParams]
   );
 
+  // Debounce search: push the URL (which refetches on the server) only after
+  // the user pauses typing, instead of firing a round-trip on every keystroke.
+  const debouncedSearch = useDebounce(search, 350);
+  useEffect(() => {
+    if (debouncedSearch !== (searchParams.get("search") ?? "")) {
+      updateParams({ search: debouncedSearch });
+    }
+  }, [debouncedSearch, searchParams, updateParams]);
+
   const handlePage = (page: number) => {
     const current = new URLSearchParams(searchParams.toString());
     current.set("page", String(page));
@@ -116,10 +126,7 @@ export function DocumentTable({
               type="text"
               placeholder="Search documents, codes, owners…"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                updateParams({ search: e.target.value });
-              }}
+              onChange={(e) => setSearch(e.target.value)}
               className="vault-input pl-10 h-9 text-sm"
             />
           </div>
