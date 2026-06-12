@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { requireAuth, requireAdmin } from "@/lib/auth/auth";
 import { documentRepository } from "@/repositories/document.repository";
 import { companyRepository } from "@/repositories/company.repository";
@@ -15,11 +15,20 @@ import { DOCUMENT_CATEGORIES } from "@/lib/constants";
 import type { ActionResult, DocumentFilters } from "@/types";
 import type { Document } from "@prisma/client";
 
+// The distinct-category DB read changes only when a document is created/updated.
+// Cache it (global, non-sensitive) under the "document-categories" tag so the
+// /documents page stops re-running a DISTINCT scan on every visit.
+const cachedUsedCategories = unstable_cache(
+  () => documentRepository.getCategories(),
+  ["document-categories"],
+  { tags: ["document-categories"] }
+);
+
 // Base categories + any custom ones already saved, deduped & sorted. "Other"
 // is the UI's "add new" affordance and is added by the form, not stored here.
 export async function getDocumentCategories(): Promise<string[]> {
   await requireAuth();
-  const used = await documentRepository.getCategories();
+  const used = await cachedUsedCategories();
   const merged = new Set<string>([
     ...DOCUMENT_CATEGORIES.filter((c) => c !== "Other"),
     ...used.filter((c) => c && c !== "Other"),
@@ -137,6 +146,7 @@ export async function createDocument(
 
     revalidatePath("/documents");
     revalidatePath("/dashboard");
+    revalidateTag("document-categories"); // a new category may have been added
     return { success: true, message: "Document created successfully", data: document };
   } catch (error) {
     console.error("Create document error:", error);
@@ -196,6 +206,7 @@ export async function updateDocument(
     revalidatePath("/documents");
     revalidatePath(`/documents/${id}/edit`);
     revalidatePath("/dashboard");
+    revalidateTag("document-categories"); // category may have changed
     return { success: true, message: "Document updated successfully", data: document };
   } catch (error) {
     console.error("Update document error:", error);

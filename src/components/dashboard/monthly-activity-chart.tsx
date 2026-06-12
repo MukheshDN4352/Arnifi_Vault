@@ -1,19 +1,23 @@
 "use client";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/shared/loading";
 
 interface MonthlyData {
   month: string;
   checkouts: number;
 }
+
+// Lazy-load the recharts body: keeps recharts out of the dashboard's initial
+// JS bundle. The skeleton reserves the chart's 200px height to avoid layout
+// shift while the chunk loads.
+const MonthlyActivityChartInner = dynamic(
+  () => import("./monthly-activity-chart-inner"),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[200px] w-full" />,
+  }
+);
 
 export function MonthlyActivityChart({ data }: { data: MonthlyData[] }) {
   return (
@@ -30,46 +34,7 @@ export function MonthlyActivityChart({ data }: { data: MonthlyData[] }) {
           No activity recorded yet
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart
-            data={data}
-            margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-            barGap={4}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#E2E8F0"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="month"
-              tick={{ fontSize: 11, fill: "#64748B" }}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "#64748B" }}
-              tickLine={false}
-              axisLine={false}
-              allowDecimals={false}
-            />
-            <Tooltip
-              contentStyle={{
-                borderRadius: "12px",
-                border: "1px solid #E2E8F0",
-                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
-                fontSize: "12px",
-              }}
-              cursor={{ fill: "rgba(79,70,229,0.04)" }}
-            />
-            <Bar
-              dataKey="checkouts"
-              fill="#4F46E5"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={36}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        <MonthlyActivityChartInner data={data} />
       )}
     </div>
   );

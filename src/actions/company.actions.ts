@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { requireAdmin } from "@/lib/auth/auth";
 import { companyRepository } from "@/repositories/company.repository";
 import { documentRepository } from "@/repositories/document.repository";
@@ -8,6 +8,16 @@ import { auditRepository } from "@/repositories/audit.repository";
 import { createCompanySchema } from "@/lib/validations/company";
 import type { ActionResult } from "@/types";
 import type { Company } from "@prisma/client";
+
+// The company select list changes only when a company is created. Cache the
+// (pure, global) DB read and invalidate it via the "companies" tag, so the
+// /documents filter dropdowns stop re-querying on every visit. The requireAdmin
+// gate stays OUTSIDE the cache — role access is unchanged.
+const cachedCompaniesForSelect = unstable_cache(
+  () => companyRepository.findForSelect(),
+  ["companies-for-select"],
+  { tags: ["companies"] }
+);
 
 export async function getCompanies(
   filters: { search?: string; page?: number; limit?: number } = {}
@@ -18,7 +28,7 @@ export async function getCompanies(
 
 export async function getCompaniesForSelect() {
   await requireAdmin();
-  return companyRepository.findForSelect();
+  return cachedCompaniesForSelect();
 }
 
 export async function getCompany(id: string) {
@@ -65,6 +75,7 @@ export async function createCompany(
       metadata: { name: company.name },
     });
     revalidatePath("/companies");
+    revalidateTag("companies"); // refresh cached select list
     return { success: true, message: "Company created successfully", data: company };
   } catch (error) {
     console.error("Create company error:", error);

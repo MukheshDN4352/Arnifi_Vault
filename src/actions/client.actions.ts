@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { requireAdmin } from "@/lib/auth/auth";
 import { clientRepository } from "@/repositories/client.repository";
 import { companyRepository } from "@/repositories/company.repository";
@@ -9,6 +9,16 @@ import { auditRepository } from "@/repositories/audit.repository";
 import { createClientSchema } from "@/lib/validations/client";
 import type { ActionResult } from "@/types";
 import type { Client } from "@prisma/client";
+
+// The client select list changes only when a client is created. Cache the
+// (pure, global) DB read and invalidate it via the "clients" tag, so the
+// /documents filter dropdowns stop re-querying on every visit. The requireAdmin
+// gate stays OUTSIDE the cache — role access is unchanged.
+const cachedClientsForSelect = unstable_cache(
+  () => clientRepository.findForSelect(),
+  ["clients-for-select"],
+  { tags: ["clients"] }
+);
 
 export async function getClients(
   filters: { search?: string; companyId?: string; page?: number; limit?: number } = {}
@@ -19,7 +29,7 @@ export async function getClients(
 
 export async function getClientsForSelect() {
   await requireAdmin();
-  return clientRepository.findForSelect();
+  return cachedClientsForSelect();
 }
 
 export async function getClient(id: string) {
@@ -70,6 +80,7 @@ export async function createClient(
       metadata: { name: client.name, companyId: parsed.data.companyId ?? null },
     });
     revalidatePath("/clients");
+    revalidateTag("clients"); // refresh cached select list
     return { success: true, message: "Client created successfully", data: client };
   } catch (error) {
     console.error("Create client error:", error);
