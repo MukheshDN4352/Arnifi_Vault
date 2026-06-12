@@ -186,8 +186,8 @@ export function Sidebar({ user }: SidebarProps) {
             onClick={() => setMobileOpen(false)}
           />
           {/* Drawer */}
-          <div className="w-72 bg-white h-full shadow-2xl animate-slide-in">
-            <div className="flex items-center justify-between px-4 py-4 border-b border-arnifi-border">
+          <div className="w-72 bg-white h-full shadow-2xl animate-slide-in flex flex-col">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-arnifi-border flex-shrink-0">
               <span className="text-sm font-semibold text-arnifi-ink">Navigation</span>
               <button
                 onClick={() => setMobileOpen(false)}
@@ -196,7 +196,9 @@ export function Sidebar({ user }: SidebarProps) {
                 <X className="w-4 h-4 text-arnifi-muted" />
               </button>
             </div>
-            <SidebarContent mobile />
+            <div className="flex-1 min-h-0">
+              <SidebarContent mobile />
+            </div>
           </div>
         </div>
       )}
