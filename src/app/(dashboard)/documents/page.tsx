@@ -33,13 +33,16 @@ export default async function DocumentsPage({ searchParams }: Props) {
     ? undefined
     : params.status;
 
+  // Location is always Dubai or India (no "All"); defaults to Dubai.
+  const location = (params.location ?? "DUBAI") as VaultLocation;
+
   const result = await getDocuments({
     search: params.search,
     status: status as DocStatus | undefined,
     category: params.category,
     companyId: params.companyId,
     clientId: params.clientId,
-    location: params.location as VaultLocation | undefined,
+    location,
     lockerNo: params.lockerNo,
     rackNo: params.rackNo,
     page: params.page ? Number(params.page) : 1,

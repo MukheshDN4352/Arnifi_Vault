@@ -71,7 +71,8 @@ export function DocumentTable({
 
   // Default view is AVAILABLE only; "ALL" clears the status filter.
   const statusValue = searchParams.get("status") ?? "AVAILABLE";
-  const locationValue = searchParams.get("location") ?? "";
+  // Location is always either Dubai or India — no "All". Defaults to Dubai.
+  const locationValue = searchParams.get("location") ?? "DUBAI";
   const lockerValue = searchParams.get("lockerNo") ?? "";
 
   const updateParams = useCallback(
@@ -100,7 +101,7 @@ export function DocumentTable({
   };
 
   const hasActiveFilters =
-    statusValue !== "AVAILABLE" || locationValue || lockerValue;
+    statusValue !== "AVAILABLE" || locationValue !== "DUBAI" || !!lockerValue;
 
   const { data: documents, total, page, limit, totalPages } = result;
 
@@ -161,10 +162,7 @@ export function DocumentTable({
               className="w-40"
               value={locationValue}
               onChange={(v) => updateParams({ location: v, lockerNo: "" })}
-              options={[
-                { value: "", label: "All Locations" },
-                ...getLocationOptions(),
-              ]}
+              options={getLocationOptions()}
             />
             <SearchableSelect
               className="w-36"
