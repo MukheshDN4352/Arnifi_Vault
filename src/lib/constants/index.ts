@@ -41,7 +41,7 @@ export const ACCEPTED_FILE_TYPES = [
   "application/pdf",
 ] as const;
 
-export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+export const MAX_FILE_SIZE = 150 * 1024 * 1024; // 150MB
 
 export const STATUS_COLORS = {
   AVAILABLE: {

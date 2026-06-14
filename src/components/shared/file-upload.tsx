@@ -38,7 +38,7 @@ export function FileUpload({ onUpload, onRemove, existingFile, disabled }: FileU
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setErrorMsg("File too large. Maximum size is 100MB");
+      setErrorMsg("File too large. Maximum size is 150MB");
       return;
     }
 
@@ -220,7 +220,7 @@ export function FileUpload({ onUpload, onRemove, existingFile, disabled }: FileU
                 <span className="text-primary-600">Click to upload</span> or drag &amp; drop
               </p>
               <p className="text-xs text-arnifi-muted mt-0.5">
-                PDF, JPEG, PNG, WebP — max 100MB
+                PDF, JPEG, PNG, WebP — max 150MB
               </p>
             </div>
           </div>
