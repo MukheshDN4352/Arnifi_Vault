@@ -23,6 +23,8 @@ import {
   type VaultLocationKey,
   getLocationOptions,
   getLockerOptions,
+  getLockerLabel,
+  getRackLabel,
 } from "@/lib/config/vault-locations";
 import type { PaginatedResult, DocumentWithOwner } from "@/types";
 
@@ -41,10 +43,17 @@ function ownerKind(doc: DocumentWithOwner): string {
   if (doc.company) return "Company";
   return "";
 }
-function locationLabel(doc: DocumentWithOwner): string {
+function locationName(doc: DocumentWithOwner): string {
   if (!doc.location) return "—";
-  const loc = VAULT_LOCATIONS[doc.location as VaultLocationKey]?.label ?? doc.location;
-  return `${loc} · ${doc.lockerNo ?? "?"} / ${doc.rackNo ?? "?"}`;
+  return VAULT_LOCATIONS[doc.location as VaultLocationKey]?.label ?? doc.location;
+}
+// Friendly "Locker 1 · Top Rack" from the stored locker/rack values.
+function lockerRackLabel(doc: DocumentWithOwner): string {
+  if (!doc.location) return "";
+  const parts: string[] = [];
+  if (doc.lockerNo) parts.push(getLockerLabel(doc.location, doc.lockerNo));
+  if (doc.rackNo) parts.push(getRackLabel(doc.location, doc.lockerNo, doc.rackNo));
+  return parts.join(" · ");
 }
 
 export function DocumentTable({
@@ -232,7 +241,16 @@ export function DocumentTable({
                         <p className="text-arnifi-ink text-sm">{ownerName(doc)}</p>
                         <p className="text-[11px] text-arnifi-muted">{ownerKind(doc)}</p>
                       </td>
-                      <td className="text-xs text-arnifi-muted whitespace-nowrap">{locationLabel(doc)}</td>
+                      <td className="text-xs text-arnifi-muted">
+                        {doc.location ? (
+                          <div className="flex flex-col leading-tight">
+                            <span className="font-medium text-arnifi-ink">{locationName(doc)}</span>
+                            {lockerRackLabel(doc) && <span>{lockerRackLabel(doc)}</span>}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td><StatusBadge status={doc.status} /></td>
                       <td>
                         {doc.fileUrl ? (
@@ -289,7 +307,10 @@ export function DocumentTable({
                     </div>
                     <StatusBadge status={doc.status} size="sm" />
                   </div>
-                  <p className="text-[11px] text-arnifi-muted">{locationLabel(doc)}</p>
+                  <p className="text-[11px] text-arnifi-muted">
+                    {locationName(doc)}
+                    {lockerRackLabel(doc) ? ` · ${lockerRackLabel(doc)}` : ""}
+                  </p>
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-arnifi-muted bg-arnifi-bg px-2 py-0.5 rounded-md border border-arnifi-border">
                       {doc.code}

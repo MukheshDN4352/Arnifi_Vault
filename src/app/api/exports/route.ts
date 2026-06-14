@@ -3,9 +3,30 @@ import { auth } from "@/lib/auth/auth";
 import { checkoutRepository } from "@/repositories/checkout.repository";
 import { auditRepository } from "@/repositories/audit.repository";
 import { formatDateTime, formatDate } from "@/lib/utils/format";
+import {
+  VAULT_LOCATIONS,
+  type VaultLocationKey,
+  getLockerLabel,
+  getRackLabel,
+} from "@/lib/config/vault-locations";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const XLSX = require("xlsx");
+
+// Friendly "Dubai · Locker 1 · Last Rack" from a checkout log's stored snapshot
+// (location/lockerNo/rackNo hold the raw values captured at checkout time).
+function formatLocation(
+  location: string | null,
+  lockerNo: string | null,
+  rackNo: string | null
+): string {
+  if (!location) return "—";
+  const name = VAULT_LOCATIONS[location as VaultLocationKey]?.label ?? location;
+  const parts: string[] = [name];
+  if (lockerNo) parts.push(getLockerLabel(location, lockerNo));
+  if (rackNo) parts.push(getRackLabel(location, lockerNo, rackNo));
+  return parts.join(" · ");
+}
 
 // Export the checkout history (admin only). Honours the same filters as the
 // Checkout History screen. Never leaks data the caller's role shouldn't see —
@@ -41,7 +62,7 @@ export async function GET(req: NextRequest) {
       "Document Code": log.docCode,
       "Document Name": log.docName,
       Owner: log.ownerClient ?? log.ownerCompany ?? "—",
-      Location: [log.location, log.lockerNo, log.rackNo].filter(Boolean).join(" / ") || "—",
+      Location: formatLocation(log.location, log.lockerNo, log.rackNo),
       "Taken By": log.takenByName,
       "Contact / Dept": log.takenByDetail ?? "—",
       Purpose: log.purpose ?? "—",

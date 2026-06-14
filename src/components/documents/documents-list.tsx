@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { VAULT_LOCATIONS, type VaultLocationKey } from "@/lib/config/vault-locations";
+import {
+  VAULT_LOCATIONS,
+  type VaultLocationKey,
+  getLockerLabel,
+  getRackLabel,
+} from "@/lib/config/vault-locations";
 import type { DocumentWithOwner } from "@/types";
 
 interface DocumentsListProps {
@@ -22,7 +27,10 @@ function categoryLabel(doc: DocumentWithOwner): string {
 function locationLabel(doc: DocumentWithOwner): string {
   if (!doc.location) return "—";
   const loc = VAULT_LOCATIONS[doc.location as VaultLocationKey]?.label ?? doc.location;
-  return `${loc} · ${doc.lockerNo ?? "?"} / ${doc.rackNo ?? "?"}`;
+  const parts: string[] = [loc];
+  if (doc.lockerNo) parts.push(getLockerLabel(doc.location, doc.lockerNo));
+  if (doc.rackNo) parts.push(getRackLabel(doc.location, doc.lockerNo, doc.rackNo));
+  return parts.join(" · ");
 }
 
 export function DocumentsList({

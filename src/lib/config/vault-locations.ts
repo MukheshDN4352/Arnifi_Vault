@@ -35,12 +35,55 @@ export function getLocationOptions(): SelectOption[] {
   }));
 }
 
+// ─── Display labels ──────────────────────────────────────────
+// The raw values in VAULT_LOCATIONS (e.g. "dubai-1", "db-1-4") are what's
+// stored in the DB (document.lockerNo / rackNo) and MUST NOT change. The
+// helpers below map a stored value to a friendly, position-based label that is
+// shown everywhere in the UI.
+
+// Positional rack names; the final rack of a locker always shows as "Last Rack".
+const RACK_ORDINALS = ["Top", "Second", "Third", "Fourth", "Fifth", "Sixth"];
+
+// "dubai-1" → "Locker 1" (numbered by position within the location).
+export function getLockerLabel(
+  location: string | null | undefined,
+  locker: string | null | undefined
+): string {
+  if (!location || !locker || !(location in VAULT_LOCATIONS)) return locker ?? "";
+  const idx = Object.keys(
+    VAULT_LOCATIONS[location as VaultLocationKey].lockers
+  ).indexOf(locker);
+  return idx >= 0 ? `Locker ${idx + 1}` : locker;
+}
+
+// "db-1-1" → "Top Rack", middle → "Second Rack"…, last → "Last Rack".
+export function getRackLabel(
+  location: string | null | undefined,
+  locker: string | null | undefined,
+  rack: string | null | undefined
+): string {
+  if (!location || !locker || !rack || !(location in VAULT_LOCATIONS)) return rack ?? "";
+  const lockers = VAULT_LOCATIONS[location as VaultLocationKey].lockers as Record<
+    string,
+    readonly string[]
+  >;
+  const racks = lockers[locker];
+  if (!racks) return rack;
+  const i = racks.indexOf(rack);
+  if (i < 0) return rack;
+  if (i === racks.length - 1) return "Last Rack";
+  return `${RACK_ORDINALS[i] ?? `#${i + 1}`} Rack`;
+}
+
 export function getLockerOptions(
   location: string | null | undefined
 ): SelectOption[] {
   if (!location || !(location in VAULT_LOCATIONS)) return [];
   const lockers = VAULT_LOCATIONS[location as VaultLocationKey].lockers;
-  return Object.keys(lockers).map((value) => ({ value, label: value }));
+  return Object.keys(lockers).map((value) => ({
+    value,
+    label: getLockerLabel(location, value),
+  }));
 }
 
 export function getRackOptions(
@@ -54,12 +97,10 @@ export function getRackOptions(
   >;
   const racks = lockers[locker];
   if (!racks) return [];
-  return racks.map((value, i) => {
-    let label = value;
-    if (i === 0) label = `${value} (Top rack)`;
-    else if (i === racks.length - 1) label = `${value} (Last rack)`;
-    return { value, label };
-  });
+  return racks.map((value) => ({
+    value,
+    label: getRackLabel(location, locker, value),
+  }));
 }
 
 /**
