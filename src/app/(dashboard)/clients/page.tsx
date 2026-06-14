@@ -14,7 +14,9 @@ interface Props {
 
 export default async function ClientsPage({ searchParams }: Props) {
   const [session, params] = await Promise.all([auth(), searchParams]);
-  if (session?.user?.role !== "ADMIN") redirect("/unauthorized");
+  const role = session?.user?.role;
+  if (role !== "ADMIN" && role !== "EMPLOYEE") redirect("/unauthorized");
+  const isAdmin = role === "ADMIN";
 
   const result = await getClients({
     search: params.search,
@@ -29,13 +31,15 @@ export default async function ClientsPage({ searchParams }: Props) {
         description="Individuals who own documents, optionally linked to a company."
         badge={`${result.total} total`}
         actions={
-          <Link href="/clients/new" className="btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
-            <Plus className="w-4 h-4" />
-            New Client
-          </Link>
+          isAdmin ? (
+            <Link href="/clients/new" className="btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
+              <Plus className="w-4 h-4" />
+              New Client
+            </Link>
+          ) : undefined
         }
       />
-      <ClientTable result={result} />
+      <ClientTable result={result} isAdmin={isAdmin} />
     </div>
   );
 }

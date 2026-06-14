@@ -14,7 +14,9 @@ interface Props {
 
 export default async function ClientDetailPage({ params }: Props) {
   const [session, { id }] = await Promise.all([auth(), params]);
-  if (session?.user?.role !== "ADMIN") redirect("/unauthorized");
+  const role = session?.user?.role;
+  if (role !== "ADMIN" && role !== "EMPLOYEE") redirect("/unauthorized");
+  const isAdmin = role === "ADMIN";
 
   if (id === "new") redirect("/clients/new");
 
@@ -92,7 +94,7 @@ export default async function ClientDetailPage({ params }: Props) {
         <h2 className="text-sm font-semibold text-arnifi-ink">
           Documents <span className="text-arnifi-muted font-normal">({documents.length})</span>
         </h2>
-        <DocumentsList documents={documents} emptyText="This client doesn't own any documents yet." />
+        <DocumentsList documents={documents} isAdmin={isAdmin} emptyText="This client doesn't own any documents yet." />
       </div>
     </div>
   );

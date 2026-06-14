@@ -14,7 +14,9 @@ interface Props {
 
 export default async function CompaniesPage({ searchParams }: Props) {
   const [session, params] = await Promise.all([auth(), searchParams]);
-  if (session?.user?.role !== "ADMIN") redirect("/unauthorized");
+  const role = session?.user?.role;
+  if (role !== "ADMIN" && role !== "EMPLOYEE") redirect("/unauthorized");
+  const isAdmin = role === "ADMIN";
 
   const result = await getCompanies({
     search: params.search,
@@ -29,13 +31,15 @@ export default async function CompaniesPage({ searchParams }: Props) {
         description="Organisations that own documents and may have client logins."
         badge={`${result.total} total`}
         actions={
-          <Link href="/companies/new" className="btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
-            <Plus className="w-4 h-4" />
-            New Company
-          </Link>
+          isAdmin ? (
+            <Link href="/companies/new" className="btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
+              <Plus className="w-4 h-4" />
+              New Company
+            </Link>
+          ) : undefined
         }
       />
-      <CompanyTable result={result} />
+      <CompanyTable result={result} isAdmin={isAdmin} />
     </div>
   );
 }

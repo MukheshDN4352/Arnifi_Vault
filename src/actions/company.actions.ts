@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
-import { requireAdmin } from "@/lib/auth/auth";
+import { requireAdmin, requireRole } from "@/lib/auth/auth";
 import { companyRepository } from "@/repositories/company.repository";
 import { documentRepository } from "@/repositories/document.repository";
 import { auditRepository } from "@/repositories/audit.repository";
 import { createCompanySchema } from "@/lib/validations/company";
+import { Role } from "@prisma/client";
 import type { ActionResult } from "@/types";
 import type { Company } from "@prisma/client";
 
@@ -22,7 +23,7 @@ const cachedCompaniesForSelect = unstable_cache(
 export async function getCompanies(
   filters: { search?: string; page?: number; limit?: number } = {}
 ) {
-  await requireAdmin();
+  await requireRole(Role.ADMIN, Role.EMPLOYEE);
   return companyRepository.findAll(filters);
 }
 
@@ -32,13 +33,13 @@ export async function getCompaniesForSelect() {
 }
 
 export async function getCompany(id: string) {
-  await requireAdmin();
+  await requireRole(Role.ADMIN, Role.EMPLOYEE);
   return companyRepository.findById(id);
 }
 
 // A company's documents = its own + all its clients' (single companyId filter).
 export async function getCompanyDocuments(id: string) {
-  await requireAdmin();
+  await requireRole(Role.ADMIN, Role.EMPLOYEE);
   return documentRepository.findByCompany(id);
 }
 

@@ -10,7 +10,13 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Pagination } from "@/components/shared/pagination";
 import type { PaginatedResult, CompanyListItem } from "@/types";
 
-export function CompanyTable({ result }: { result: PaginatedResult<CompanyListItem> }) {
+export function CompanyTable({
+  result,
+  isAdmin = false,
+}: {
+  result: PaginatedResult<CompanyListItem>;
+  isAdmin?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -57,14 +63,16 @@ export function CompanyTable({ result }: { result: PaginatedResult<CompanyListIt
             className="vault-input pl-10 h-9 text-sm"
           />
         </div>
-        <Link
-          href="/companies/new"
-          className="btn-primary flex items-center gap-2 px-3.5 py-2 text-sm flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">New Company</span>
-          <span className="sm:hidden">New</span>
-        </Link>
+        {isAdmin && (
+          <Link
+            href="/companies/new"
+            className="btn-primary flex items-center gap-2 px-3.5 py-2 text-sm flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Company</span>
+            <span className="sm:hidden">New</span>
+          </Link>
+        )}
       </div>
 
       {companies.length === 0 ? (
@@ -75,7 +83,7 @@ export function CompanyTable({ result }: { result: PaginatedResult<CompanyListIt
             search ? "Try a different search." : "Create your first company to own documents."
           }
           action={
-            !search ? (
+            isAdmin && !search ? (
               <Link href="/companies/new" className="btn-primary text-sm px-4 py-2">
                 Add Company
               </Link>

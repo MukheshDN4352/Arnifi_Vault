@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
-import { requireAdmin } from "@/lib/auth/auth";
+import { requireAdmin, requireRole } from "@/lib/auth/auth";
 import { clientRepository } from "@/repositories/client.repository";
 import { companyRepository } from "@/repositories/company.repository";
 import { documentRepository } from "@/repositories/document.repository";
 import { auditRepository } from "@/repositories/audit.repository";
 import { createClientSchema } from "@/lib/validations/client";
+import { Role } from "@prisma/client";
 import type { ActionResult } from "@/types";
 import type { Client } from "@prisma/client";
 
@@ -23,7 +24,7 @@ const cachedClientsForSelect = unstable_cache(
 export async function getClients(
   filters: { search?: string; companyId?: string; page?: number; limit?: number } = {}
 ) {
-  await requireAdmin();
+  await requireRole(Role.ADMIN, Role.EMPLOYEE);
   return clientRepository.findAll(filters);
 }
 
@@ -33,12 +34,12 @@ export async function getClientsForSelect() {
 }
 
 export async function getClient(id: string) {
-  await requireAdmin();
+  await requireRole(Role.ADMIN, Role.EMPLOYEE);
   return clientRepository.findById(id);
 }
 
 export async function getClientDocuments(id: string) {
-  await requireAdmin();
+  await requireRole(Role.ADMIN, Role.EMPLOYEE);
   return documentRepository.findByClient(id);
 }
 

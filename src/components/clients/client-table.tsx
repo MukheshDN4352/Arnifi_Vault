@@ -10,7 +10,13 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Pagination } from "@/components/shared/pagination";
 import type { PaginatedResult, ClientListItem } from "@/types";
 
-export function ClientTable({ result }: { result: PaginatedResult<ClientListItem> }) {
+export function ClientTable({
+  result,
+  isAdmin = false,
+}: {
+  result: PaginatedResult<ClientListItem>;
+  isAdmin?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -57,14 +63,16 @@ export function ClientTable({ result }: { result: PaginatedResult<ClientListItem
             className="vault-input pl-10 h-9 text-sm"
           />
         </div>
-        <Link
-          href="/clients/new"
-          className="btn-primary flex items-center gap-2 px-3.5 py-2 text-sm flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">New Client</span>
-          <span className="sm:hidden">New</span>
-        </Link>
+        {isAdmin && (
+          <Link
+            href="/clients/new"
+            className="btn-primary flex items-center gap-2 px-3.5 py-2 text-sm flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Client</span>
+            <span className="sm:hidden">New</span>
+          </Link>
+        )}
       </div>
 
       {clients.length === 0 ? (
@@ -75,7 +83,7 @@ export function ClientTable({ result }: { result: PaginatedResult<ClientListItem
             search ? "Try a different search." : "Create clients to own documents (optionally under a company)."
           }
           action={
-            !search ? (
+            isAdmin && !search ? (
               <Link href="/clients/new" className="btn-primary text-sm px-4 py-2">
                 Add Client
               </Link>

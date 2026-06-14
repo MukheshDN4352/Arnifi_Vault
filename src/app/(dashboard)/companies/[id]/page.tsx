@@ -15,7 +15,9 @@ interface Props {
 
 export default async function CompanyDetailPage({ params }: Props) {
   const [session, { id }] = await Promise.all([auth(), params]);
-  if (session?.user?.role !== "ADMIN") redirect("/unauthorized");
+  const role = session?.user?.role;
+  if (role !== "ADMIN" && role !== "EMPLOYEE") redirect("/unauthorized");
+  const isAdmin = role === "ADMIN";
 
   if (id === "new") redirect("/companies/new");
 
@@ -102,6 +104,7 @@ export default async function CompanyDetailPage({ params }: Props) {
         <DocumentsList
           documents={documents}
           showOwner
+          isAdmin={isAdmin}
           emptyText="This company and its clients don't own any documents yet."
         />
       </div>

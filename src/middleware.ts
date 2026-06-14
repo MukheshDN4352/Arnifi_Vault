@@ -16,13 +16,19 @@ const RESET_ROUTE = "/reset-password";
 // Routes requiring ADMIN role
 const ADMIN_ROUTES = [
   "/users",
-  "/companies",
-  "/clients",
+  "/companies/new",
+  "/clients/new",
   "/documents/new",
   "/checkout-history",
   "/audit-trail",
   "/reports",
 ];
+
+// Routes available to staff (ADMIN + EMPLOYEE) but not CLIENT. View-only
+// directories for companies/clients and their related documents. Note: the
+// "/companies/new" and "/clients/new" create routes above are matched first and
+// stay ADMIN-only, so employees can browse but not create.
+const STAFF_ROUTES = ["/companies", "/clients"];
 
 export default auth((req) => {
   const { nextUrl } = req;
@@ -67,6 +73,15 @@ export default auth((req) => {
   );
 
   if (isAdminRoute && userRole !== "ADMIN") {
+    return NextResponse.redirect(new URL("/unauthorized", nextUrl));
+  }
+
+  // Staff-only (ADMIN + EMPLOYEE) view sections — CLIENT is denied.
+  const isStaffRoute = STAFF_ROUTES.some(
+    (route) =>
+      nextUrl.pathname === route || nextUrl.pathname.startsWith(`${route}/`)
+  );
+  if (isStaffRoute && userRole !== "ADMIN" && userRole !== "EMPLOYEE") {
     return NextResponse.redirect(new URL("/unauthorized", nextUrl));
   }
 

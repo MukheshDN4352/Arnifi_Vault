@@ -29,14 +29,16 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   adminOnly?: boolean;
+  // Visible to staff (ADMIN + EMPLOYEE) but not CLIENT. View-only sections.
+  staff?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Checkout History", href: "/checkout-history", icon: ClipboardList, adminOnly: true },
-  { label: "Companies", href: "/companies", icon: Building2, adminOnly: true },
-  { label: "Clients", href: "/clients", icon: UserSquare2, adminOnly: true },
+  { label: "Companies", href: "/companies", icon: Building2, staff: true },
+  { label: "Clients", href: "/clients", icon: UserSquare2, staff: true },
   { label: "Users", href: "/users", icon: Users, adminOnly: true },
   { label: "Audit Trail", href: "/audit-trail", icon: ShieldCheck, adminOnly: true },
   { label: "Reports", href: "/reports", icon: BarChart3, adminOnly: true },
@@ -51,10 +53,13 @@ export function Sidebar({ user }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAdmin = user.role === "ADMIN";
+  const isStaff = user.role === "ADMIN" || user.role === "EMPLOYEE";
 
-  const filteredNav = NAV_ITEMS.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
+  const filteredNav = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly) return isAdmin;
+    if (item.staff) return isStaff;
+    return true;
+  });
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === href;
